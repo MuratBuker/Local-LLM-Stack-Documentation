@@ -1,6 +1,6 @@
 # Local LLM Stack Documentation
 
-Linkedin port to read it there. <https://www.linkedin.com/pulse/local-llm-stack-documentation-murat-b%25C3%25BCker-1biuf>
+Linkedin port to read it there. [Article Link](<https://www.linkedin.com/pulse/local-llm-stack-documentation-murat-b%25C3%25BCker-1biuf>)
 
 ## Introduction
 
