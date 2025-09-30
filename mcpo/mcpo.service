@@ -1,0 +1,22 @@
+[Unit]
+Description=My Custom Proxy Orchestrator
+After=network.target
+
+[Service]
+User=root
+Group=root
+ExecStart=/root/.local/bin/uvx mcpo --port 8000 --api-key "123456" --config /home/stigmata/mcpo/config.json
+WorkingDirectory=/home/stigmata/mcpo
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+
+
+
+
+
+
