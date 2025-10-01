@@ -62,8 +62,8 @@ To make this more accessible, I’ve built a **local LLM stack** with open-sourc
 
 Here is a basic diagram of the stack architecture:
 
-![diagram drawio](https://github.com/user-attachments/assets/9cafd2e6-da6b-4692-a147-752c942ca883)
----
+![diagram drawio](diagram.drawio.svg)
+
 ---
 
 ## Configurations of AI Stack Components
@@ -245,9 +245,9 @@ docker-compose up -d
 
 It will take too long to go over every environment variables. You can check official documentation via [Environtmen Variables](<https://docs.openwebui.com/getting-started/env-configuration/>).
 
-With default settings, **Open-WebUI** will use **SQLite** as the database to store chat history and configurations and ChromaDB as the vector database to store embeddings. 
+With default settings, **Open-WebUI** will use **SQLite** as the database to store chat history and configurations and ChromaDB as the vector database to store embeddings.
 
-However, for better performance and scalability, I will use **PostgreSQL** as the database and **Qdrant** as the vector database. 
+However, for better performance and scalability, I will use **PostgreSQL** as the database and **Qdrant** as the vector database.
 
 I will run **PostgreSQL** directly on the host, but you can run it as a container as well. So, first install PostgreSQL on the host and create a database and user for Open-WebUI.
 
@@ -448,19 +448,13 @@ Wİth below command you will install uv with their install script.
 wget -qO- https://astral.sh/uv/install.sh | sh
 ~~~
 
-**Netbox MCP**
-
-GitHub Repo:
+Netbox MCP GitHub Repo:
 <https://GitHub.com/netboxlabs/netbox-mcp-server>
 
-**Time MCP**
-
-GitHub Repo:
+Time MCP GitHub Repo:
 <https://GitHub.com/modelcontextprotocol/servers/tree/main/src/time>
 
-**Searxng**
-
-GitHub Repo:
+Searxng GitHub Repo:
 <https://github.com/SecretiveShell/MCP-searxng>
 
 I will use MCPO to proxy all the MCP servers. MCPO is a multi-cloud proxy orchestrator that can manage multiple MCP servers.
@@ -777,7 +771,7 @@ networks:
 
 ### Closing
 
-Thank you for reading till here : ) 
+Thank you for reading till here : )
 
 If you have any questions or need further assistance, feel free to reach out. I hope this documentation helps you set up your own local LLM stack successfully!
 
