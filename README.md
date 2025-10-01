@@ -37,14 +37,27 @@ To make this more accessible, I’ve built a **local LLM stack** with open-sourc
  The stack is composed of the following components:
 
 * **Portainer**: A web-based management interface for Docker environments. We will use lots containers in this stack, so Portainer will help us manage them easily.
+
+* **Watchtower**: With watchtower you can update the running version of your containerized app simply by pushing a new image to the Docker Hub or your own image registry.
+
 * **Ollama**: A local LLM server that hosts various language models. Not the best performance-wise, but easy to set up and use.
+
 * **vLLM**: A high-performance language model server. It supports a wide range of models and is optimized for speed and efficiency.
+
 * **Open-WebUI**: A web-based user interface for interacting with language models. It supports multiple backends, including Ollama and vLLM.
+
 * **Docling**: A document processing and embedding service. It extracts text from various document formats and generates embeddings for use in LLMs.
+
 * **MCPO**: A multi-cloud proxy orchestrator that integrates with various MCP servers.
-* **Netbox MCP**: A server for managing network devices and configurations.
+
+* **Netbox MCP**: MCP server for managing network devices and configurations.
+
+* **Searxng MCP**: MCP for giving Web search capabilities to the model as tool.
+
 * **Time MCP**: A server for providing time-related functionalities.
+
 * **Qdrant**: A vector database for storing and querying embeddings.
+
 * **PostgreSQL**: A relational database for storing configuration and chat history.
 
 Here is a basic diagram of the stack architecture:
@@ -54,6 +67,12 @@ Here is a basic diagram of the stack architecture:
 ---
 
 ## Configurations of AI Stack Components
+
+### Pre-note
+
+You can find docker-compose files for each app but also you can see a docker-compose with contains all the stack.
+
+You can experiment with the dedicated yaml files.
 
 ### Prerequisites
 
@@ -143,33 +162,73 @@ Environment="PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/
 WantedBy=default.target
 ~~~
 
-Some explanation of the parameters:
+Then reload daemon, enable and start service.
+
+~~~bash
+systemctl daemon-reload
+systemctl enable ollama
+systemctl start ollama
+~~~
+
+If you want to troubleshoot Ollama you can use:
+
+~~~bash
+journalctl -u ollama
+~~~
+
+**Some explanation of the parameters:**
 
 **OLLAMA_MAX_LOADED_MODELS=4**: This parameter sets the maximum number of models that can be loaded into memory at the same time. By setting it to 4, you allow up to four models to be active concurrently. This is useful if you plan to work with multiple models and want to switch between them without reloading each time.
 
 **OLLAMA_NUM_PARALLEL=4**: This parameter specifies the number of parallel processing threads that Ollama can use. Setting it to 4 means that Ollama can handle up to four requests simultaneously, which can improve performance when multiple users or applications are accessing the service at the same time.
 
-* Create custom model
-
-~~~bash
-ollama create my-llama -f ./Modelfile
-~~~
-
 ### Open-WebUI Config
 
 I will use Open-WebUI as the main interface to interact with the language models. It supports both Ollama and vLLM as backends. I will run Open-WebUI as a container using Docker Compose. The simplest docker-compose is below:
 
+~~~bash
+mkdir ~/open-webui && cd ~/open-webui
+nano docker-compose-file.yaml
+~~~
+
+Then copy the below to yaml.
+
 ~~~yaml
-services:
   open-webui:
-    image: ghcr.io/open-webui/open-webui:cuda
+    image: ghcr.io/open-webui/open-webui:latest-cuda
     container_name: open-webui
     volumes:
-      - open-webui:/app/backend/data
-    network_mode: "host"
+      - open-webui-data:/app/backend/data
     environment:
-      - 'OLLAMA_BASE_URL=http://localhost:11434'
-      - 'WEBUI_SECRET_KEY='
+      - OLLAMA_BASE_URL=http://localhost:11434
+      - ENABLE_OPENAI_API=False
+      - WEBUI_NAME=GlassHouse
+      - USE_CUDA_DOCKER=True
+      - VECTOR_DB=qdrant
+      - QDRANT_URI=http://localhost:6333
+      - ENABLE_QDRANT_MULTITENANCY_MODE=True
+      - CONTENT_EXTRACTION_ENGINE=docling
+      - DOCLING_SERVER_URL=http://localhost:5001
+      - DOCLING_OCR_ENGINE=tesseract
+      - DOCLING_OCR_LANG=eng,tur
+      - GLOBAL_LOG_LEVEL=DEBUG
+      - RAG_EMBEDDING_ENGINE=ollama
+      - RAG_EMBEDDING_MODEL=bge-m3:567m
+      - RAG_TOP_K=10
+      - RAG_TOP_K_RERANKER=5
+      - RAG_EMBEDDING_BATCH_SIZE=30
+      - CHUNK_SIZE=2000
+      - CHUNK_OVERLAP=200
+      - RAG_TEXT_SPLITTER=token
+      - ENABLE_CODE_EXECUTION=False
+      - ENABLE_WEB_SEARCH=False
+      - ENABLE_EVALUATION_ARENA_MODELS=False
+      - ENABLE_CODE_INTERPRETER=False
+      - DEFAULT_USER_ROLE=pending
+      - ENABLE_SIGNUP_PASSWORD_CONFIRMATION=True
+      - MCP_ENABLE=True
+      - DATABASE_URL=postgresql://openwebui:${DB_PASS}@localhost:5432/openwebui
+    network_mode: host
     restart: unless-stopped
     deploy:
       resources:
@@ -178,18 +237,19 @@ services:
             - driver: nvidia
               count: all
               capabilities: [gpu]
-
-volumes:
-  open-webui: {}
 ~~~
 
 ~~~bash
 docker-compose up -d
 ~~~
 
-With default settings, Open-WebUI will use SQLite as the database to store chat history and configurations. ChromaDB as the vector database to store embeddings. However, for better performance and scalability, I will use PostgreSQL as the database and Qdrant as the vector database. Below is the updated docker-compose file with PostgreSQL and Qdrant configurations.
+It will take too long to go over every environment variables. You can check official documentation via [Environtmen Variables](<https://docs.openwebui.com/getting-started/env-configuration/>).
 
-I will run PostgreSQL directly on the host, but you can run it as a container as well. SO first install PostgreSQL on the host and create a database and user for Open-WebUI.
+With default settings, **Open-WebUI** will use **SQLite** as the database to store chat history and configurations and ChromaDB as the vector database to store embeddings. 
+
+However, for better performance and scalability, I will use **PostgreSQL** as the database and **Qdrant** as the vector database. 
+
+I will run **PostgreSQL** directly on the host, but you can run it as a container as well. So, first install PostgreSQL on the host and create a database and user for Open-WebUI.
 
 ~~~bash
 sudo apt update
@@ -198,12 +258,13 @@ sudo -u postgres psql
 ~~~
 
 ~~~sql
+// CHANGE THE USERNAME AND PASSWORD
 CREATE DATABASE openwebui;
 CREATE USER openwebui WITH PASSWORD 'openwebui_postgre!!';
 ALTER DATABASE openwebui OWNER TO openwebui;
 ~~~
 
-With below long docker-compose file, we are deploying Docling, Qdrant, two vLLM instances (one for reranker and one for GPT-4-OSS 20B model), and Open-WebUI with PostgreSQL as the database.
+Now, with below docker-compose file, we can dploy , Open-WebUI with PostgreSQL configuration as the database and Qdrant as Vector DB.
 
 ~~~yaml
 services:
@@ -268,79 +329,6 @@ services:
     networks:
       - webui-net
 
-  docling-serve:
-    image: ghcr.io/docling-project/docling-serve-cu128:main
-    container_name: docling-serve
-    ports:
-      - "5001:5001"
-    environment:
-      DOCLING_SERVE_ENABLE_UI: "true"
-      NVIDIA_VISIBLE_DEVICES: "all"
-    runtime: nvidia
-    restart: unless-stopped
-    networks:
-      - webui-net
-
-  vllm-reranker:
-    image: vllm/vllm-openai:v0.10.2
-    container_name: vllm-reranker
-    runtime: nvidia
-    environment:
-      - HUGGING_FACE_HUB_TOKEN=${HF_TOKEN}
-      - NVIDIA_VISIBLE_DEVICES=all
-    volumes:
-      - ~/.cache/huggingface:/root/.cache/huggingface
-    ports:
-      - "9001:9001"
-    networks:
-      - webui-net
-    ipc: host
-    command: |
-      --model BAAI/bge-reranker-v2-m3
-      --gpu-memory-utilization 0.3
-      --host 0.0.0.0
-      --port 9001
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
-
-  vllm-gpt:
-    image: vllm/vllm-openai:v0.10.2
-    container_name: vllm-gpt
-    runtime: nvidia
-    environment:
-      - HUGGING_FACE_HUB_TOKEN=${HF_TOKEN}
-      - NVIDIA_VISIBLE_DEVICES=all
-    volumes:
-      - ~/.cache/huggingface:/root/.cache/huggingface
-    ports:
-      - "9002:9002"
-    networks:
-      - webui-net
-    ipc: host
-    command: |
-      --model openai/gpt-oss-20b
-      --gpu-memory-utilization 0.6
-      --host 0.0.0.0
-      --port 9002
-      --max-model-len 64000
-      --max-num-seqs 128
-      --async-scheduling
-      --api-key 123456
-      --enable-auto-tool-choice
-      --tool-call-parser openai
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
-
 volumes:
   open-webui-data:
   qdrant-storage:
@@ -350,11 +338,12 @@ networks:
     name: webui-net
 ~~~
 
-Because Open-WebUI is heavly developed, it is a good idea to pull the latest image from time to time.
+Because Open-WebUI is heavly developed, it is a good idea to pull the latest image from time to time with below basic steps. Or you can use watchtower which I will talk about later.
 
-* update open-webui docker image
+* Update open-webui docker image
 
 ~~~bash
+cd ~/open-webui
 docker pull ghcr.io/open-webui/open-webui:latest-cuda
 docker rm -f open-webui
 docker compose up -d
@@ -371,7 +360,7 @@ If you want to deploy docling separately, you can use below commands.
 docker run -d --gpus all -p 5001:5001 -e DOCLING_SERVE_ENABLE_UI=true quay.io/docling-project/docling-serve-cu124
 ~~~
 
-Or better use below docker-compose file with CUDA support.
+Or better use below docker-compose file with **CUDA** support.
 
 ~~~yaml
 services:
@@ -393,105 +382,25 @@ http://localhost:5001
 
 ---
 
-### MCP Configurations
-
-I will use two different MCP servers for my tests. One is for Netbox and the other is for time-date.
-
-LLMs are not aware of current date and time. So, if you ask a question like "What is the date 10 days from now?", the model will not be able to answer it correctly. To solve this problem, we can use a Time MCP server that provides the current date and time to the model.
-
-In order to run most of the MCP servers, you will need uv. uv is an extremely fast Python package and project manager, written in Rust.
-
-Wİth below command you will install uv with their install script.
-
-~~~bash
-wget -qO- https://astral.sh/uv/install.sh | sh
-~~~
-
-* Netbox MCP
-
-GitHub Repo:
-<https://GitHub.com/netboxlabs/netbox-mcp-server>
-
-* Time MCP
-
-GitHub Repo:
-<https://GitHub.com/modelcontextprotocol/servers/tree/main/src/time>
-
-I will use MCPO to run both MCP servers. MCPO is a multi-cloud proxy orchestrator that can manage multiple MCP servers.
-
-### MCPO Config
-
-* GitHub Repo: <https://GitHub.com/open-webui/mcpo>
-* Create a config file for MCP servers
-* Run MCPO as a service via port 8009
-
-~~~bash
-mkdir /root/mcpo
-pip install mcpo
-nano /root/mcpo/config.json
-~~~
-
-~~~bash
-nano /etc/systemd/system/mcpo.service
-~~~
-
-~~~text
-[Unit]
-Description=My Custom Proxy Orchestrator
-After=network.target
-
-[Service]
-User=root
-Group=root
-ExecStart=/root/.local/bin/uvx mcpo --port 8009 --config /root/mcpo/config.json
-WorkingDirectory=/root/mcpo
-Restart=always
-RestartSec=10
-StandardOutput=journal
-StandardError=journal
-
-[Install]
-WantedBy=multi-user.target
-~~~
-
-~~~json
-{
-    "mcpServers": {
-        "netbox": {
-            "command": "/root/.local/bin/uv",
-            "args": [
-                "--directory",
-                "/root/netbox-mcp-server",
-                "run",
-                "server.py"
-            ],
-            "env": {
-                "NETBOX_URL": "https://localhost/",
-                "NETBOX_TOKEN": "e76baad4fa637b6c3c597cdcb691a69abf61ab44"
-            }
-        },
-        "time": {
-            "command": "/root/.local/bin/uvx",
-            "args": [
-                "mcp-server-time"
-            ]
-        }
-    }
-}
-~~~
-
----
-
 ### vLLM Config
 
-I will use vLLM as the main LLM server for this stack. vLLM is a high-performance language model server that supports a wide range of models and is optimized for speed and efficiency. Also Ollama does not support reranker models.
+I will use vLLM as the main LLM inference engine for this stack. vLLM is a high-performance language model server that supports a wide range of models and is optimized for speed and efficiency. Also Ollama does not support reranker models.
+
+**Considirations**:
 
 * vLLM does not support multi model in a single instance. So, for each model, a new instance should be created.
 
 * Every model has model-specific parameters. Please check the vLLM documentation for more details.
 * You can create .env file to store environment variables like HF_TOKEN.
 
-Here a sample docker-compose file for vLLM. You can add multiple vLLM services for different models as needed.
+Lets first create path and .env.
+
+~~~bash
+mkdir ~/vllm && cd ~/vllm
+echo "HF_TOKEN=**YOUR_HUGGINGFACE_TOKEN**" > .env
+~~~
+
+Then here a sample docker-compose file for vLLM. You can add multiple vLLM services for different models as needed.
 
 ~~~yaml
 services:
@@ -525,8 +434,158 @@ services:
 
 ---
 
+### MCP Configurations
+
+I will use three different MCP servers for my tests. One is for Netbox, other one is for Web surfing Searxng and the other is for time-date.
+
+LLMs are **not aware** of current **date and time**. So, if you ask a question like "What is the date 10 days from now?", the model will not be able to answer it correctly. To solve this problem, we can use a Time MCP server that provides the current date and time to the model.
+
+In order to run most of the MCP servers, you will need uv. uv is an extremely fast Python package and project manager, written in Rust.
+
+Wİth below command you will install uv with their install script.
+
+~~~bash
+wget -qO- https://astral.sh/uv/install.sh | sh
+~~~
+
+**Netbox MCP**
+
+GitHub Repo:
+<https://GitHub.com/netboxlabs/netbox-mcp-server>
+
+**Time MCP**
+
+GitHub Repo:
+<https://GitHub.com/modelcontextprotocol/servers/tree/main/src/time>
+
+**Searxng**
+
+GitHub Repo:
+<https://github.com/SecretiveShell/MCP-searxng>
+
+I will use MCPO to proxy all the MCP servers. MCPO is a multi-cloud proxy orchestrator that can manage multiple MCP servers.
+
+### MCPO Config
+
+* GitHub Repo: <https://GitHub.com/open-webui/mcpo>
+* Create a config file for MCP servers
+* Run MCPO as a service via port 8009 (whatever port you want)
+
+~~~bash
+mkdir /~~/mcpo
+pip install mcpo
+nano /~~/mcpo/config.json
+~~~
+
+Copy-paste below json to file.
+  
+~~~json
+{
+  "mcpServers": {
+
+    "netbox": {
+      "command": "/root/.local/bin/uv",
+      "args": [
+        "--directory",
+        "/root/netbox-mcp-server",
+        "run",
+        "server.py"
+      ],
+      "env": {
+        "NETBOX_URL": "https://localhost/",
+        "NETBOX_TOKEN": "e76baad4fa637b6c3c597cdcb691a69abf61ab44"
+      }
+    },
+
+    "time": {
+      "command": "/root/.local/bin/uvx",
+      "args": [
+        "mcp-server-time"
+      ]
+    },
+    
+    "searxng": {
+      "command": "/root/.local/bin/uv",
+      "args": [
+        "--project",
+        "/root/MCP-searxng/",
+        "run",
+        "/root/MCP-searxng/src/mcp-searxng/main.py"
+      ],
+      "env": {
+        "SEARXNG_URL": "http://localhost:4000"
+      }
+    }
+  }
+}
+~~~
+
+In order to run MCPO as a linux service do the below steps:
+
+~~~bash
+nano /etc/systemd/system/mcpo.service
+~~~
+
+~~~text
+[Unit]
+Description=My Custom Proxy Orchestrator
+After=network.target
+
+[Service]
+User=root
+Group=root
+ExecStart=/root/.local/bin/uvx mcpo --port 8009 --config /root/mcpo/config.json
+WorkingDirectory=/root/mcpo
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+~~~
+
+Then reload daemon, enable and start service.
+
+~~~bash
+systemctl daemon-reload
+systemctl enable mcpo
+systemctl start mcpo
+~~~
+
+If you want to check for service logs, you can use follow:
+
+~~~bash
+journalctl -u mcpo
+~~~
+
+---
+
+### Watchtower
+
+Since we are heaviliy using Docker container, managing their image updates is a thing. You can use Wathtower to monitor and check every container you specified at the defined time. It will download new image if any and restart the container with the new image.
+
+You can use below docker-compose. You can add or remove container names.
+
+~~~yaml
+services:
+  watchtower:
+    image: containrrr/watchtower
+    container_name: watchtower
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - TZ=Europe/Istanbul #your timezone
+    command: --schedule "0 0 0 * * *" open-webui n8n-n8n-1 n8n-worker-1 docling-serve perplexica-searxng-1 perplexica-app-1 portainer
+~~~~
+
+---
+---
+---
+
 ### Closing
 
 If you have any questions or need further assistance, feel free to reach out. I hope this documentation helps you set up your own local LLM stack successfully!
 
-Murat Buker - 30.10.2025
+Murat - 30.10.2025

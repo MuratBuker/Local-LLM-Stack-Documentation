@@ -1,0 +1,47 @@
+services:
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:latest-cuda
+    container_name: open-webui
+    volumes:
+      - open-webui-data:/app/backend/data
+    environment:
+      - OLLAMA_BASE_URL=http://localhost:11434
+      - ENABLE_OPENAI_API=False
+      - WEBUI_NAME=GlassHouse
+      - USE_CUDA_DOCKER=True
+      - VECTOR_DB=qdrant
+      - QDRANT_URI=http://localhost:6333
+      - ENABLE_QDRANT_MULTITENANCY_MODE=True
+      - CONTENT_EXTRACTION_ENGINE=docling
+      - DOCLING_SERVER_URL=http://localhost:5001
+      - DOCLING_OCR_ENGINE=tesseract
+      - DOCLING_OCR_LANG=eng,tur
+      - GLOBAL_LOG_LEVEL=DEBUG
+      - RAG_EMBEDDING_ENGINE=ollama
+      - RAG_EMBEDDING_MODEL=bge-m3:567m
+      - RAG_TOP_K=10
+      - RAG_TOP_K_RERANKER=5
+      - RAG_EMBEDDING_BATCH_SIZE=30
+      - CHUNK_SIZE=2000
+      - CHUNK_OVERLAP=200
+      - RAG_TEXT_SPLITTER=token
+      - ENABLE_CODE_EXECUTION=False
+      - ENABLE_WEB_SEARCH=False
+      - ENABLE_EVALUATION_ARENA_MODELS=False
+      - ENABLE_CODE_INTERPRETER=False
+      - DEFAULT_USER_ROLE=pending
+      - ENABLE_SIGNUP_PASSWORD_CONFIRMATION=True
+      - MCP_ENABLE=True
+      - DATABASE_URL=postgresql://openwebui:${DB_PASS}@localhost:5432/openwebui
+    network_mode: host
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+volumes:
+  open-webui: {}

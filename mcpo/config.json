@@ -1,54 +1,38 @@
 {
-    "mcpServers": {
-        "netbox": {
-            "command": "/root/.local/bin/uv",
-            "args": [
-                "--directory",
-                "/root/netbox-mcp-server",
-                "run",
-                "server.py"
-            ],
-            "env": {
-                "NETBOX_URL": "https://localhost/",
-                "NETBOX_TOKEN": "e76baad4fa637b6c3c597cdcb691a69abf61ab44"
-            }
-        },
-        "zabbix": {
-            "command": "/root/.local/bin/uv",
-            "args": [
-                "--directory",
-                "/root/zabbix-mcp",
-                "run",
-                "server.py"
-            ],
-            "env": {
-                "ZABBIX_URL": "http://10.10.10.225/api_jsonrpc.php",
-                "ZABBIX_TOKEN": "2c1eee336c059cf654493d38bc8b0168bd6469d290a0d7fd50fe73bc130a4fae"
-            }
-        },
-        "time": {
-            "command": "/root/.local/bin/uvx",
-            "args": [
-                "mcp-server-time"
-            ]
-        },
-        "zabbix-mcp": {
-            "command": "/root/.local/bin/uv",
-            "args": [
-                "--directory",
-                "/root/zabbix-mcp-server/src",
-                "run",
-                "python",
-                "zabbix_mcp_server.py"
-            ]
-        },
-        "grafana": {
-            "command": "mcp-grafana",
-            "args": [],
-            "env": {
-                "GRAFANA_URL": "http://localhost:3001",
-                "GRAFANA_API_KEY": "glsa_F5QxJoP2hbvejMU10xcK3trANonOek2v_d0974d6a"
-            }
-        }
+  "mcpServers": {
+
+    "netbox": {
+      "command": "/root/.local/bin/uv",
+      "args": [
+        "--directory",
+        "/root/netbox-mcp-server",
+        "run",
+        "server.py"
+      ],
+      "env": {
+        "NETBOX_URL": "https://localhost/",
+        "NETBOX_TOKEN": "e76baad4fa637b6c3c597cdcb691a69abf61ab44"
+      }
+    },
+
+    "time": {
+      "command": "/root/.local/bin/uvx",
+      "args": [
+        "mcp-server-time"
+      ]
+    },
+    
+    "searxng": {
+      "command": "/root/.local/bin/uv",
+      "args": [
+        "--project",
+        "/root/MCP-searxng/",
+        "run",
+        "/root/MCP-searxng/src/mcp-searxng/main.py"
+      ],
+      "env": {
+        "SEARXNG_URL": "http://localhost:4000"
+      }
     }
+  }
 }
