@@ -578,14 +578,209 @@ services:
     environment:
       - TZ=Europe/Istanbul #your timezone
     command: --schedule "0 0 0 * * *" open-webui n8n-n8n-1 n8n-worker-1 docling-serve perplexica-searxng-1 perplexica-app-1 portainer
-~~~~
+~~~
 
 ---
----
+
+### Bundled Stack Docker Compose
+
+And finally one big docker-compose file to deploy all the containers we discussed. Do not forget to create **.env** file with Huggingface token.
+
+~~~yaml
+services:
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:latest-cuda
+    container_name: open-webui
+    volumes:
+      - open-webui-data:/app/backend/data
+    environment:
+      - OLLAMA_BASE_URL=http://localhost:11434
+      - ENABLE_OPENAI_API=False
+      - WEBUI_NAME=GlassHouse
+      - USE_CUDA_DOCKER=True
+      - VECTOR_DB=qdrant
+      - QDRANT_URI=http://localhost:6333
+      - ENABLE_QDRANT_MULTITENANCY_MODE=True
+      - CONTENT_EXTRACTION_ENGINE=docling
+      - DOCLING_SERVER_URL=http://localhost:5001
+      - DOCLING_OCR_ENGINE=tesseract
+      - DOCLING_OCR_LANG=eng,tur
+      - GLOBAL_LOG_LEVEL=DEBUG
+      - RAG_EMBEDDING_ENGINE=ollama
+      - RAG_EMBEDDING_MODEL=bge-m3:567m
+      - RAG_TOP_K=10
+      - RAG_TOP_K_RERANKER=5
+      - RAG_EMBEDDING_BATCH_SIZE=30
+      - CHUNK_SIZE=2000
+      - CHUNK_OVERLAP=200
+      - RAG_TEXT_SPLITTER=token
+      - ENABLE_CODE_EXECUTION=False
+      - ENABLE_WEB_SEARCH=False
+      - ENABLE_EVALUATION_ARENA_MODELS=False
+      - ENABLE_CODE_INTERPRETER=False
+      - DEFAULT_USER_ROLE=pending
+      - ENABLE_SIGNUP_PASSWORD_CONFIRMATION=True
+      - MCP_ENABLE=True
+      - DATABASE_URL=postgresql://openwebui:${DB_PASS}@localhost:5432/openwebui
+    network_mode: host
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: qdrant
+    restart: unless-stopped
+    ports:
+      - "6333:6333"
+    volumes:
+      - qdrant-storage:/qdrant/storage
+    networks:
+      - webui-net
+
+  docling-serve:
+    image: ghcr.io/docling-project/docling-serve-cu128:main
+    container_name: docling-serve
+    ports:
+      - "5001:5001"
+    environment:
+      DOCLING_SERVE_ENABLE_UI: "true"
+      NVIDIA_VISIBLE_DEVICES: "all"
+    runtime: nvidia
+    restart: unless-stopped
+    networks:
+      - webui-net
+
+  vllm-reranker:
+    image: vllm/vllm-openai:v0.10.2
+    container_name: vllm-reranker
+    runtime: nvidia
+    environment:
+      - HUGGING_FACE_HUB_TOKEN=${HF_TOKEN}
+      - NVIDIA_VISIBLE_DEVICES=all
+    volumes:
+      - ~/.cache/huggingface:/root/.cache/huggingface
+    ports:
+      - "9001:9001"
+    networks:
+      - webui-net
+    ipc: host
+    command: |
+      --model BAAI/bge-reranker-v2-m3
+      --gpu-memory-utilization 0.3
+      --host 0.0.0.0
+      --port 9001
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  vllm-gpt:
+    image: vllm/vllm-openai:v0.10.2
+    container_name: vllm-gpt
+    runtime: nvidia
+    environment:
+      - HUGGING_FACE_HUB_TOKEN=${HF_TOKEN}
+      - NVIDIA_VISIBLE_DEVICES=all
+    volumes:
+      - ~/.cache/huggingface:/root/.cache/huggingface
+    ports:
+      - "9002:9002"
+    networks:
+      - webui-net
+    ipc: host
+    command: |
+      --model openai/gpt-oss-20b
+      --gpu-memory-utilization 0.6
+      --host 0.0.0.0
+      --port 9002
+      --max-model-len 64000
+      --max-num-seqs 128
+      --async-scheduling
+      --api-key 123456
+      --enable-auto-tool-choice
+      --tool-call-parser openai
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  watchtower:
+    image: containrrr/watchtower
+    container_name: watchtower
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - TZ=Europe/Istanbul
+    command: --schedule "0 0 0 * * *" open-webui n8n-n8n-1 n8n-worker-1 docling-serve perplexica-searxng-1 perplexica-app-1 portainer
+
+  searxng:
+    image: docker.io/searxng/searxng:latest
+    container_name: perplexica-searxng-1
+    volumes:
+      - ./searxng:/etc/searxng:rw
+    ports:
+      - 4000:8080
+    networks:
+      - perplexica-network
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  app:
+    image: itzcrazykns1337/perplexica:main
+    container_name: perplexica-app-1
+    build:
+      context: .
+      dockerfile: app.dockerfile
+    environment:
+      - SEARXNG_API_URL=http://searxng:8090
+      - DATA_DIR=/home/perplexica
+    ports:
+      - 3000:3000
+    networks:
+      - perplexica-network
+    volumes:
+      - backend-dbstore:/home/perplexica/data
+      - uploads:/home/perplexica/uploads
+      - ./config.toml:/home/perplexica/config.toml
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+volumes:
+  open-webui-data:
+  qdrant-storage:
+  backend-dbstore:
+  uploads:
+
+networks:
+  webui-net:
+    name: webui-net
+  perplexica-network:
+    name: perplexica-network
+~~~
+
 ---
 
 ### Closing
 
+Thank you for reading till here : ) 
+
 If you have any questions or need further assistance, feel free to reach out. I hope this documentation helps you set up your own local LLM stack successfully!
+
+Take care.
 
 Murat - 30.10.2025
