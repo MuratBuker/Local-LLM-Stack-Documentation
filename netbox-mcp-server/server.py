@@ -180,14 +180,36 @@ def preprocess_filters(object_type: str, filters: dict) -> dict:
     """
     processed_filters = filters.copy()
 
-    # Handle tenant name resolution for devices, virtual-machines, and other tenant-related objects
+    # Handle tenant resolution
     if object_type in ["devices", "virtual-machines", "ip-addresses", "prefixes", "vlans", "vrfs"]:
-        if "tenant" in processed_filters and isinstance(processed_filters["tenant"], str):
-            tenant_name = processed_filters.pop("tenant")
-            identifier_type, identifier_value = resolve_tenant_identifier(tenant_name)
-            processed_filters[identifier_type] = identifier_value
+        if "tenant" in processed_filters:
+            tenant_value = processed_filters.pop("tenant")
 
-    # Handle manufacturer name resolution for device-types
+            tenant_ids = []
+            tenant_slugs = []
+
+            # Accept string like "1,2" or a list
+            if isinstance(tenant_value, str):
+                tenant_list = [t.strip() for t in tenant_value.split(",")]
+            elif isinstance(tenant_value, (list, tuple)):
+                tenant_list = tenant_value
+            else:
+                tenant_list = [tenant_value]
+
+            for t in tenant_list:
+                identifier_type, identifier_value = resolve_tenant_identifier(str(t))
+                if identifier_type == "tenant_id":
+                    tenant_ids.append(identifier_value)
+                else:
+                    tenant_slugs.append(identifier_value)
+
+            # Add back into filters
+            if tenant_ids:
+                processed_filters["tenant_id"] = tenant_ids
+            if tenant_slugs:
+                processed_filters["tenant"] = tenant_slugs
+
+    # Manufacturer resolution
     if object_type == "device-types" and "manufacturer" in processed_filters and isinstance(processed_filters["manufacturer"], str):
         manufacturers = netbox.get("dcim/manufacturers", params={"name": processed_filters["manufacturer"]})
         if manufacturers and len(manufacturers) > 0:

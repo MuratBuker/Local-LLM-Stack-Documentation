@@ -6,7 +6,8 @@ services:
       - open-webui-data:/app/backend/data
     environment:
       - OLLAMA_BASE_URL=http://localhost:11434
-      - ENABLE_OPENAI_API=False
+      - ENABLE_OPENAI_API=True
+      - OPENAI_API_BASE_URL=http://localhost:9002/v1
       - WEBUI_NAME=GlassHouse
       - USE_CUDA_DOCKER=True
       - VECTOR_DB=qdrant
@@ -21,10 +22,11 @@ services:
       - RAG_EMBEDDING_MODEL=bge-m3:567m
       - RAG_TOP_K=10
       - RAG_TOP_K_RERANKER=5
-      - RAG_EMBEDDING_BATCH_SIZE=30
+      - RAG_EMBEDDING_BATCH_SIZE=100
       - CHUNK_SIZE=2000
       - CHUNK_OVERLAP=200
       - RAG_TEXT_SPLITTER=token
+      - RAG_RERANKING_MODEL=BAAI/bge-reranker-v2-m3 
       - ENABLE_CODE_EXECUTION=False
       - ENABLE_WEB_SEARCH=False
       - ENABLE_EVALUATION_ARENA_MODELS=False
@@ -36,7 +38,7 @@ services:
     network_mode: host
     restart: unless-stopped
     deploy:
-      resources:
+      resources:  
         reservations:
           devices:
             - driver: nvidia
