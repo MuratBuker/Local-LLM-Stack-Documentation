@@ -1,4 +1,11 @@
 # Local LLM Stack Documentation
+  <a href="https://github.com/netbox-community/netbox/stargazers"><img src="https://img.shields.io/github/stars/netbox-community/netbox?style=flat" alt="GitHub stars" /></a>
+
+Here is a basic diagram of the stack architecture:
+
+![diagram drawio](diagram.drawio.svg)
+
+
 
 Linkedin port to read it there. [Article Link](<https://www.linkedin.com/pulse/local-llm-stack-documentation-murat-b%25C3%25BCker-1biuf>)
 
@@ -60,9 +67,6 @@ To make this more accessible, I’ve built a **local LLM stack** with open-sourc
 
 * **PostgreSQL**: A relational database for storing configuration and chat history.
 
-Here is a basic diagram of the stack architecture:
-
-![diagram drawio](diagram.drawio.svg)
 
 ---
 
