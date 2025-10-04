@@ -62,6 +62,7 @@ services:
     ports:
       - "5001:5001"
     environment:
+      DOCLING_SERVE_MAX_SYNC_WAIT: 720
       DOCLING_SERVE_ENABLE_UI: "true"
       NVIDIA_VISIBLE_DEVICES: "all"
     runtime: nvidia

@@ -1,5 +1,5 @@
 # Local LLM Stack Documentation
-  <a href="https://github.com/netbox-community/netbox/stargazers"><img src="https://img.shields.io/github/stars/netbox-community/netbox?style=flat" alt="GitHub stars" /></a>
+  <a href="https://github.com/netbox-community/netbox/stargazers"><img src="https://img.shields.io/github/stars/MuratBuker/Local-LLM-Stack-Documentation?style=flat" alt="GitHub stars" /></a>
 
 Here is a basic diagram of the stack architecture:
 
