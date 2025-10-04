@@ -69,9 +69,9 @@ services:
     networks:
       - webui-net
 
-  vllm-reranker:
+  vllm-Qwen3-Reranker-06B:
     image: vllm/vllm-openai:v0.10.2
-    container_name: vllm-reranker
+    container_name: vllm-Qwen3-Reranker-06B
     runtime: nvidia
     environment:
       - HUGGING_FACE_HUB_TOKEN=${HF_TOKEN}
@@ -84,7 +84,7 @@ services:
       - webui-net
     ipc: host
     command: |
-      --model BAAI/bge-reranker-v2-m3
+      --model Qwen/Qwen3-Reranker-0.6B
       --gpu-memory-utilization 0.3
       --host 0.0.0.0
       --port 9001
@@ -96,9 +96,9 @@ services:
               count: all
               capabilities: [gpu]
 
-  vllm-gpt:
-    image: vllm/vllm-openai:v0.10.2
-    container_name: vllm-gpt
+  vllm-qwen3-30b:
+    image: vllm/vllm-openai:latest
+    container_name: vllm-Qwen3-30B-A3B-GPTQ-Int4
     runtime: nvidia
     environment:
       - HUGGING_FACE_HUB_TOKEN=${HF_TOKEN}
@@ -111,16 +111,18 @@ services:
       - webui-net
     ipc: host
     command: |
-      --model openai/gpt-oss-20b
+      --model Qwen/Qwen3-30B-A3B-GPTQ-Int4
       --gpu-memory-utilization 0.6
       --host 0.0.0.0
       --port 9002
-      --max-model-len 64000
-      --max-num-seqs 128
+      --max-num-seqs 1
       --async-scheduling
       --api-key 123456
+      --reasoning-parser qwen3
       --enable-auto-tool-choice
-      --tool-call-parser openai
+      --tool-call-parser hermes
+      --generation-config auto
+      --override-generation-config '{"temperature":0.6,"top_p":0.95,"top_k":20,"presence_penalty":1.5,"chat_template_kwargs":{"enable_thinking":true}}'
     deploy:
       resources:
         reservations:
