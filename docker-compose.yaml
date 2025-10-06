@@ -26,7 +26,7 @@ services:
       - CHUNK_SIZE=2000
       - CHUNK_OVERLAP=200
       - RAG_TEXT_SPLITTER=token
-      - RAG_RERANKING_MODEL=BAAI/bge-reranker-v2-m3 
+      - RAG_RERANKING_MODEL=Qwen/Qwen3-Reranker-0.6B
       - ENABLE_CODE_EXECUTION=False
       - ENABLE_WEB_SEARCH=False
       - ENABLE_EVALUATION_ARENA_MODELS=False
@@ -38,7 +38,7 @@ services:
     network_mode: host
     restart: unless-stopped
     deploy:
-      resources:  
+      resources:
         reservations:
           devices:
             - driver: nvidia
@@ -86,9 +86,12 @@ services:
     ipc: host
     command: |
       --model Qwen/Qwen3-Reranker-0.6B
-      --gpu-memory-utilization 0.3
+      --gpu-memory-utilization 0.25
       --host 0.0.0.0
       --port 9001
+      --max-model-len 16000
+      --cpu-offload-gb 10
+      --hf_overrides '{"architectures": ["Qwen3ForSequenceClassification"],"classifier_from_token": ["no", "yes"],"is_original_qwen3_reranker": true}'  
     deploy:
       resources:
         reservations:
@@ -97,9 +100,9 @@ services:
               count: all
               capabilities: [gpu]
 
-  vllm-qwen3-30b:
-    image: vllm/vllm-openai:latest
-    container_name: vllm-Qwen3-30B-A3B-GPTQ-Int4
+  vllm-gpt:
+    image: vllm/vllm-openai:v0.10.2
+    container_name: vllm-gpt
     runtime: nvidia
     environment:
       - HUGGING_FACE_HUB_TOKEN=${HF_TOKEN}
@@ -112,18 +115,16 @@ services:
       - webui-net
     ipc: host
     command: |
-      --model Qwen/Qwen3-30B-A3B-GPTQ-Int4
+      --model openai/gpt-oss-20b
       --gpu-memory-utilization 0.6
       --host 0.0.0.0
       --port 9002
-      --max-num-seqs 1
+      --max-model-len 40000
+      --max-num-seqs 128
       --async-scheduling
       --api-key 123456
-      --reasoning-parser qwen3
       --enable-auto-tool-choice
-      --tool-call-parser hermes
-      --generation-config auto
-      --override-generation-config '{"temperature":0.6,"top_p":0.95,"top_k":20,"presence_penalty":1.5,"chat_template_kwargs":{"enable_thinking":true}}'
+      --tool-call-parser openai
     deploy:
       resources:
         reservations:
@@ -131,7 +132,6 @@ services:
             - driver: nvidia
               count: all
               capabilities: [gpu]
-
   watchtower:
     image: containrrr/watchtower
     container_name: watchtower
@@ -150,7 +150,7 @@ services:
     ports:
       - 4000:8080
     networks:
-      - perplexica-network
+      - webui-net
     restart: unless-stopped
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -167,7 +167,7 @@ services:
     ports:
       - 3000:3000
     networks:
-      - perplexica-network
+      - webui-net
     volumes:
       - backend-dbstore:/home/perplexica/data
       - uploads:/home/perplexica/uploads
@@ -185,5 +185,3 @@ volumes:
 networks:
   webui-net:
     name: webui-net
-  perplexica-network:
-    name: perplexica-network
