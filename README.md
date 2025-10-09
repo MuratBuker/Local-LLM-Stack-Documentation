@@ -55,6 +55,8 @@ To make this more accessible, I’ve built a **local LLM stack** with open-sourc
 
 * **Docling**: A document processing and embedding service. It extracts text from various document formats and generates embeddings for use in LLMs.
 
+* **Searxng**: Open-source Web search engine.
+
 * **MCPO**: A multi-cloud proxy orchestrator that integrates with various MCP servers.
 
 * **Netbox MCP**: MCP server for managing network devices and configurations.
@@ -247,7 +249,7 @@ Then copy the below to yaml.
 docker-compose up -d
 ~~~
 
-It will take too long to go over every environment variables. You can check official documentation via [Environtmen Variables](<https://docs.openwebui.com/getting-started/env-configuration/>).
+It will take too long to go over every environment variables. You can check official documentation via [Environment Variables](<https://docs.openwebui.com/getting-started/env-configuration/>).
 
 With default settings, **Open-WebUI** will use **SQLite** as the database to store chat history and configurations and ChromaDB as the vector database to store embeddings.
 
@@ -268,7 +270,7 @@ CREATE USER openwebui WITH PASSWORD 'openwebui_postgre!!';
 ALTER DATABASE openwebui OWNER TO openwebui;
 ~~~
 
-Now, with below docker-compose file, we can dploy , Open-WebUI with PostgreSQL configuration as the database and Qdrant as Vector DB.
+Now, with below docker-compose file, we can deploy , Open-WebUI with PostgreSQL configuration as the database and Qdrant as Vector DB.
 
 ~~~yaml
 services:
@@ -300,9 +302,7 @@ services:
       - RAG_TEXT_SPLITTER=token
       - RAG_EMBEDDING_BATCH_SIZE=30
       - ENABLE_CODE_EXECUTION=False
-      - ENABLE_WEB_SEARCH=True
-      - WEB_SEARCH_RESULT_COUNT=3
-      - WEB_SEARCH_ENGINE=searxng
+      - ENABLE_WEB_SEARCH=False
       - SEARXNG_QUERY_URL=http://localhost:4000/search?q=<query>
       - ENABLE_EVALUATION_ARENA_MODELS=False
       - ENABLE_CODE_INTERPRETER=False
@@ -342,7 +342,7 @@ networks:
     name: webui-net
 ~~~
 
-Because Open-WebUI is heavly developed, it is a good idea to pull the latest image from time to time with below basic steps. Or you can use watchtower which I will talk about later.
+Because Open-WebUI is heavily developed, it is a good idea to pull the latest image from time to time with below basic steps. Or you can use watchtower which I will talk about later.
 
 * Update open-webui docker image
 
@@ -351,6 +351,65 @@ cd ~/open-webui
 docker pull ghcr.io/open-webui/open-webui:latest-cuda
 docker rm -f open-webui
 docker compose up -d
+~~~
+
+---
+
+### SearXNG Config
+
+I will use Searxng as the web search engine for this stack. Searxng is an open-source metasearch engine that aggregates results from various search engines while respecting user privacy.
+
+Why using Searxng and Searxng MCP in this stack? Because, as of right now, Open-WebUI's Web Search feature is lacking performance and reliability. So, I will use Searxng MCP to give web search capabilities to the model as a tool.
+
+You will need settings.yaml file to run Searxng. You can find a sample settings.yaml file below. You can modify it as needed.
+
+~~~bash
+mkdir searxng && cd searxng
+nano settings.yaml
+~~~
+
+Basic settings.yaml file:
+
+~~~yaml
+use_default_settings: true
+
+general:
+  instance_name: 'searxng'
+
+search:
+  autocomplete: 'google'
+  formats:
+    - html
+    - json
+
+server:
+  secret_key: 'a2fb23f1b02e6ee83875b09826990de0f6bd908b6638e8c10277d415f6ab852b' # Is overwritten by ${SEARXNG_SECRET}
+
+~~~
+
+Then run create and run docker-compose.yaml file.
+
+docker-compose.yaml >>>
+
+~~~yaml
+services:
+  searxng:
+    image: docker.io/searxng/searxng:latest
+    container_name: searxng
+    volumes:
+      - /~/searxng:/etc/searxng:rw
+    ports:
+      - 4000:8080
+    networks:
+      - webui-net
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+networks:
+  webui-net:
+    name: webui-net
+
 ~~~
 
 ---
@@ -390,7 +449,7 @@ http://localhost:5001
 
 I will use vLLM as the main LLM inference engine for this stack. vLLM is a high-performance language model server that supports a wide range of models and is optimized for speed and efficiency. Also Ollama does not support reranker models.
 
-**Considirations**:
+**Considerations**:
 
 * vLLM does not support multi model in a single instance. So, for each model, a new instance should be created.
 
@@ -458,8 +517,10 @@ Netbox MCP GitHub Repo:
 Time MCP GitHub Repo:
 <https://GitHub.com/modelcontextprotocol/servers/tree/main/src/time>
 
-Searxng GitHub Repo:
-<https://github.com/SecretiveShell/MCP-searxng>
+Searxng MCP GitHub Repo:
+<https://github.com/ihor-sokoliuk/mcp-searxng>
+
+If you want you can add Wikipedia MCP as well.
 
 I will use MCPO to proxy all the MCP servers. MCPO is a multi-cloud proxy orchestrator that can manage multiple MCP servers.
 
@@ -501,18 +562,21 @@ Copy-paste below json to file.
         "mcp-server-time"
       ]
     },
-    
+
     "searxng": {
-      "command": "/root/.local/bin/uv",
+      "command": "npx",
       "args": [
-        "--project",
-        "/root/MCP-searxng/",
-        "run",
-        "/root/MCP-searxng/src/mcp-searxng/main.py"
+        "--y",
+        "mcp-searxng"
       ],
       "env": {
         "SEARXNG_URL": "http://localhost:4000"
       }
+    },
+
+    "wikipedia": {
+      "command": "/root/wiki-mcp/venv/bin/wikipedia-mcp",
+      "args": ["--country", "TR"]
     }
   }
 }
@@ -561,7 +625,7 @@ journalctl -u mcpo
 
 ### Watchtower
 
-Since we are heaviliy using Docker container, managing their image updates is a thing. You can use Wathtower to monitor and check every container you specified at the defined time. It will download new image if any and restart the container with the new image.
+Since we are heavily using Docker container, managing their image updates is a thing. You can use Watchtower to monitor and check every container you specified at the defined time. It will download new image if any and restart the container with the new image.
 
 You can use below docker-compose. You can add or remove container names.
 
@@ -575,7 +639,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
       - TZ=Europe/Istanbul #your timezone
-    command: --schedule "0 0 0 * * *" open-webui n8n-n8n-1 n8n-worker-1 docling-serve perplexica-searxng-1 perplexica-app-1 portainer
+    command: --schedule "0 0 0 * * *" open-webui docling-serve searxng portainer
 ~~~
 
 ---
@@ -593,7 +657,8 @@ services:
       - open-webui-data:/app/backend/data
     environment:
       - OLLAMA_BASE_URL=http://localhost:11434
-      - ENABLE_OPENAI_API=False
+      - ENABLE_OPENAI_API=True
+      - OPENAI_API_BASE_URL=http://localhost:9002/v1
       - WEBUI_NAME=GlassHouse
       - USE_CUDA_DOCKER=True
       - VECTOR_DB=qdrant
@@ -608,10 +673,11 @@ services:
       - RAG_EMBEDDING_MODEL=bge-m3:567m
       - RAG_TOP_K=10
       - RAG_TOP_K_RERANKER=5
-      - RAG_EMBEDDING_BATCH_SIZE=30
+      - RAG_EMBEDDING_BATCH_SIZE=100
       - CHUNK_SIZE=2000
       - CHUNK_OVERLAP=200
       - RAG_TEXT_SPLITTER=token
+      - RAG_RERANKING_MODEL=Qwen/Qwen3-Reranker-0.6B
       - ENABLE_CODE_EXECUTION=False
       - ENABLE_WEB_SEARCH=False
       - ENABLE_EVALUATION_ARENA_MODELS=False
@@ -647,6 +713,7 @@ services:
     ports:
       - "5001:5001"
     environment:
+      DOCLING_SERVE_MAX_SYNC_WAIT: 720
       DOCLING_SERVE_ENABLE_UI: "true"
       NVIDIA_VISIBLE_DEVICES: "all"
     runtime: nvidia
@@ -654,10 +721,11 @@ services:
     networks:
       - webui-net
 
-  vllm-reranker:
+  vllm-Qwen3-Reranker-06B:
     image: vllm/vllm-openai:v0.10.2
-    container_name: vllm-reranker
+    container_name: vllm-Qwen3-Reranker-06B
     runtime: nvidia
+    restart: unless-stopped
     environment:
       - HUGGING_FACE_HUB_TOKEN=${HF_TOKEN}
       - NVIDIA_VISIBLE_DEVICES=all
@@ -669,10 +737,13 @@ services:
       - webui-net
     ipc: host
     command: |
-      --model BAAI/bge-reranker-v2-m3
-      --gpu-memory-utilization 0.3
+      --model Qwen/Qwen3-Reranker-0.6B
+      --gpu-memory-utilization 0.22
       --host 0.0.0.0
       --port 9001
+      --max-model-len 16000
+      --cpu-offload-gb 10
+      --hf_overrides '{"architectures": ["Qwen3ForSequenceClassification"],"classifier_from_token": ["no", "yes"],"is_original_qwen3_reranker": true}'  
     deploy:
       resources:
         reservations:
@@ -685,6 +756,7 @@ services:
     image: vllm/vllm-openai:v0.10.2
     container_name: vllm-gpt
     runtime: nvidia
+    restart: unless-stopped
     environment:
       - HUGGING_FACE_HUB_TOKEN=${HF_TOKEN}
       - NVIDIA_VISIBLE_DEVICES=all
@@ -700,7 +772,7 @@ services:
       --gpu-memory-utilization 0.6
       --host 0.0.0.0
       --port 9002
-      --max-model-len 64000
+      --max-model-len 32000
       --max-num-seqs 128
       --async-scheduling
       --api-key 123456
@@ -713,7 +785,6 @@ services:
             - driver: nvidia
               count: all
               capabilities: [gpu]
-
   watchtower:
     image: containrrr/watchtower
     container_name: watchtower
@@ -722,38 +793,17 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
       - TZ=Europe/Istanbul
-    command: --schedule "0 0 0 * * *" open-webui n8n-n8n-1 n8n-worker-1 docling-serve perplexica-searxng-1 perplexica-app-1 portainer
+    command: --schedule "0 0 0 * * *" open-webui docling-serve searxng portainer
 
   searxng:
     image: docker.io/searxng/searxng:latest
-    container_name: perplexica-searxng-1
+    container_name: searxng
     volumes:
-      - ./searxng:/etc/searxng:rw
+      - /~/searxng:/etc/searxng:rw
     ports:
       - 4000:8080
     networks:
-      - perplexica-network
-    restart: unless-stopped
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-
-  app:
-    image: itzcrazykns1337/perplexica:main
-    container_name: perplexica-app-1
-    build:
-      context: .
-      dockerfile: app.dockerfile
-    environment:
-      - SEARXNG_API_URL=http://searxng:8090
-      - DATA_DIR=/home/perplexica
-    ports:
-      - 3000:3000
-    networks:
-      - perplexica-network
-    volumes:
-      - backend-dbstore:/home/perplexica/data
-      - uploads:/home/perplexica/uploads
-      - ./config.toml:/home/perplexica/config.toml
+      - webui-net
     restart: unless-stopped
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -761,14 +811,10 @@ services:
 volumes:
   open-webui-data:
   qdrant-storage:
-  backend-dbstore:
-  uploads:
 
 networks:
   webui-net:
     name: webui-net
-  perplexica-network:
-    name: perplexica-network
 ~~~
 
 ---

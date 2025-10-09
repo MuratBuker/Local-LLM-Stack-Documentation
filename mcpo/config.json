@@ -21,18 +21,21 @@
         "mcp-server-time"
       ]
     },
-    
+
     "searxng": {
-      "command": "/root/.local/bin/uv",
+      "command": "npx",
       "args": [
-        "--project",
-        "/root/MCP-searxng/",
-        "run",
-        "/root/MCP-searxng/src/mcp-searxng/main.py"
+        "--y",
+        "mcp-searxng"
       ],
       "env": {
         "SEARXNG_URL": "http://localhost:4000"
       }
+    },
+
+    "wikipedia": {
+      "command": "/root/wiki-mcp/venv/bin/wikipedia-mcp",
+      "args": ["--country", "TR"]
     }
   }
 }

@@ -74,6 +74,7 @@ services:
     image: vllm/vllm-openai:v0.10.2
     container_name: vllm-Qwen3-Reranker-06B
     runtime: nvidia
+    restart: unless-stopped
     environment:
       - HUGGING_FACE_HUB_TOKEN=${HF_TOKEN}
       - NVIDIA_VISIBLE_DEVICES=all
@@ -86,7 +87,7 @@ services:
     ipc: host
     command: |
       --model Qwen/Qwen3-Reranker-0.6B
-      --gpu-memory-utilization 0.25
+      --gpu-memory-utilization 0.22
       --host 0.0.0.0
       --port 9001
       --max-model-len 16000
@@ -104,6 +105,7 @@ services:
     image: vllm/vllm-openai:v0.10.2
     container_name: vllm-gpt
     runtime: nvidia
+    restart: unless-stopped
     environment:
       - HUGGING_FACE_HUB_TOKEN=${HF_TOKEN}
       - NVIDIA_VISIBLE_DEVICES=all
@@ -119,7 +121,7 @@ services:
       --gpu-memory-utilization 0.6
       --host 0.0.0.0
       --port 9002
-      --max-model-len 40000
+      --max-model-len 32000
       --max-num-seqs 128
       --async-scheduling
       --api-key 123456
@@ -144,9 +146,9 @@ services:
 
   searxng:
     image: docker.io/searxng/searxng:latest
-    container_name: perplexica-searxng-1
+    container_name: searxng
     volumes:
-      - ./searxng:/etc/searxng:rw
+      - /~/searxng:/etc/searxng:rw
     ports:
       - 4000:8080
     networks:
@@ -155,32 +157,9 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
-  app:
-    image: itzcrazykns1337/perplexica:main
-    container_name: perplexica-app-1
-    build:
-      context: .
-      dockerfile: app.dockerfile
-    environment:
-      - SEARXNG_API_URL=http://searxng:8090
-      - DATA_DIR=/home/perplexica
-    ports:
-      - 3000:3000
-    networks:
-      - webui-net
-    volumes:
-      - backend-dbstore:/home/perplexica/data
-      - uploads:/home/perplexica/uploads
-      - ./config.toml:/home/perplexica/config.toml
-    restart: unless-stopped
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-
 volumes:
   open-webui-data:
   qdrant-storage:
-  backend-dbstore:
-  uploads:
 
 networks:
   webui-net:
