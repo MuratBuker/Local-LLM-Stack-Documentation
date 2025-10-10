@@ -1,6 +1,5 @@
 {
   "mcpServers": {
-
     "netbox": {
       "command": "/root/.local/bin/uv",
       "args": [
@@ -14,14 +13,12 @@
         "NETBOX_TOKEN": "e76baad4fa637b6c3c597cdcb691a69abf61ab44"
       }
     },
-
     "time": {
       "command": "/root/.local/bin/uvx",
       "args": [
         "mcp-server-time"
       ]
     },
-
     "searxng": {
       "command": "npx",
       "args": [
@@ -32,10 +29,23 @@
         "SEARXNG_URL": "http://localhost:4000"
       }
     },
-
     "wikipedia": {
       "command": "/root/wiki-mcp/venv/bin/wikipedia-mcp",
       "args": ["--country", "TR"]
+    },
+    "glasshouse": {
+      "command": "/root/.local/bin/uv",
+      "args": [
+        "--directory",
+        "/root/glasshouse-mcp-server",
+        "run",
+        "run_server.py"
+      ],
+      "env": {
+        "GLASSHOUSE_URL": "https://ghos.glasshouse.com.tr",
+        "GLASSHOUSE_USERNAME": "barisserbes",
+        "GLASSHOUSE_API_KEY": "176535006"
+      }
     }
   }
 }
