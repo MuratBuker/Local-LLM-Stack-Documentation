@@ -39,12 +39,13 @@
         "--directory",
         "/root/glasshouse-mcp-server",
         "run",
-        "run_server.py"
+        "python3",
+        "src/glasshouse_mcp/server.py"
       ],
       "env": {
         "GLASSHOUSE_URL": "https://ghos.glasshouse.com.tr",
         "GLASSHOUSE_USERNAME": "barisserbes",
-        "GLASSHOUSE_API_KEY": "176535006"
+        "GLASSHOUSE_CACHE_TTL": "300"
       }
     }
   }
