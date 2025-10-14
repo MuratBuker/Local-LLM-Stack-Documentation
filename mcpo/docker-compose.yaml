@@ -1,0 +1,17 @@
+services:
+  mcpo:
+    # Use the image specified in the docker run command
+    image: ghcr.io/open-webui/mcpo:main
+    
+    # Map the host port 8000 to the container port 8000
+    ports:
+      - "8009:8009"
+      
+    # Pass the command and arguments exactly as they were in the docker run
+    # Note: Use a single quoted block scalar (like below) to ensure the 
+    # command and its arguments are passed correctly as a single string to the shell.
+    command: >
+      --config ~/mcpo/config.json 
+    
+    # Optional: If you need to make the container restart automatically
+    restart: unless-stopped
