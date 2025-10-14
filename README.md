@@ -2,7 +2,8 @@
   <h1><strong>Local LLM Stack Documentation</strong></h1>
   
   <a href="https://github.com/MuratBuker/Local-LLM-Stack-Documentation"><img src="https://img.shields.io/github/stars/MuratBuker/Local-LLM-Stack-Documentation?style=flat" alt="GitHub stars" /></a>
-  &nbsp;&nbsp; <a href="https://github.com/MuratBuker/Local-LLM-Stack-Documentation"><img src="https://img.shields.io/github/v/release/MuratBuker/Local-LLM-Stack-Documentation" alt="Latest release" /></a>
+  &nbsp;&nbsp; <a href="..."><img src="https://img.shields.io/github/v/release/MuratBuker/Local-LLM-Stack-Documentation?cache=1" alt="Latest release" /></a>
+
 </div>
 
 
