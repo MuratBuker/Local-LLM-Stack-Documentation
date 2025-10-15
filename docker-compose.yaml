@@ -5,22 +5,32 @@ services:
     volumes:
       - open-webui-data:/app/backend/data
     environment:
+          # Ollama connection
           OLLAMA_BASE_URL: http://host.docker.internal:11434
+          # vLLM connection
           ENABLE_OPENAI_API: "True"
           OPENAI_API_BASE_URL: http://vllm-gpt:9002/v1
+          # Web UI settings
           WEBUI_NAME: GlassHouse
           WEBUI_URL: https://opn.lotus.net.tr
           CORS_ALLOW_ORIGIN: https://opn.lotus.net.tr
+          # Enable CUDA
           USE_CUDA_DOCKER: "True"
+          # Disable API for Open-WebUI for security
           ENABLE_API_KEY: "False"
+          # Use Qdrant as vector DB
           VECTOR_DB: qdrant
           QDRANT_URI: http://qdrant:6333
           ENABLE_QDRANT_MULTITENANCY_MODE: "True"
+          # Use Docling for extraction
           CONTENT_EXTRACTION_ENGINE: docling
           DOCLING_SERVER_URL: http://docling-serve:5001
           DOCLING_OCR_ENGINE: tesseract
           DOCLING_OCR_LANG: eng,tur
+          # Log level info or debug
           GLOBAL_LOG_LEVEL: INFO
+          # RAG embedding settings
+          RAG_ALLOWED_FILE_EXTENSIONS: '["pdf,docx,doc,txt,md,pptx,xls,xlsx,csv,epub,html,htm,xml,json,yaml,yml"]'
           RAG_EMBEDDING_ENGINE: ollama
           RAG_EMBEDDING_MODEL: qwen3-embedding:0.6b
           RAG_OLLAMA_BASE_URL: http://host.docker.internal:11434
@@ -31,16 +41,25 @@ services:
           CHUNK_OVERLAP: 100
           ENABLE_RAG_HYBRID_SEARCH: "True"
           RAG_TEXT_SPLITTER: token
+          # RAG Reranker settings
+          RAG_RERANKING_ENGINE: external
+          RAG_EXTERNAL_RERANKER_URL: http://vllm-qwen3-reranker-06b:9001/rerank
           RAG_RERANKING_MODEL: Qwen/Qwen3-Reranker-0.6B
+          # Disable some features for security
           ENABLE_CODE_EXECUTION: "False"
           ENABLE_WEB_SEARCH: "False"
           ENABLE_EVALUATION_ARENA_MODELS: "True"
           ENABLE_CODE_INTERPRETER: "False"
+          # User signup settings
           DEFAULT_USER_ROLE: pending
           ENABLE_SIGNUP_PASSWORD_CONFIRMATION: "True"
+          # New parameter, enable MCP
           MCP_ENABLE: "True"
+          # Reducing VRAM usage
           ENABLE_AUTOCOMPLETE_GENERATION: "False"
+          # Using PostgreSQL
           DATABASE_URL: postgresql://openwebui:${DB_PASS}@host.docker.internal:5432/openwebui
+          # External mcp tools
           TOOL_SERVER_CONNECTIONS: '[{"name": "Netbox", "url": "http://host.docker.internal:8009/netbox"},{"name": "Time", "url": "http://host.docker.internal:8009/time"},{"name": "Searxng", "url": "http://host.docker.internal:8009/searxng"},{"name": "Wikipedia", "url": "http://host.docker.internal:8009/wikipedia"},{"name": "GHOS", "url": "http://host.docker.internal:8009/glasshouse"}]'
     ports:
     - "8080:8080"
@@ -82,9 +101,9 @@ services:
     networks:
       - webui-net
 
-  vllm-Qwen3-Reranker-06B:
+  vllm-qwen3-reranker-06b:
     image: vllm/vllm-openai:v0.10.2
-    container_name: vllm-Qwen3-Reranker-06B
+    container_name: vllm-qwen3-reranker-06b
     runtime: nvidia
     restart: unless-stopped
     environment:
@@ -99,7 +118,7 @@ services:
     ipc: host
     command: |
       --model Qwen/Qwen3-Reranker-0.6B
-      --gpu-memory-utilization 0.22
+      --gpu-memory-utilization 0.2
       --host 0.0.0.0
       --port 9001
       --max-model-len 16000
@@ -130,7 +149,7 @@ services:
     ipc: host
     command: |
       --model openai/gpt-oss-20b
-      --gpu-memory-utilization 0.6
+      --gpu-memory-utilization 0.55
       --host 0.0.0.0
       --port 9002
       --max-model-len 32000
@@ -153,7 +172,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
       - TZ=Europe/Istanbul
-    command: --schedule "0 0 0 * * *" open-webui docling-serve searxng portainer
+    command: --schedule "0 0 0 * * *" open-webui docling-serve searxng portainer qdrant
 
   searxng:
     image: docker.io/searxng/searxng:latest
