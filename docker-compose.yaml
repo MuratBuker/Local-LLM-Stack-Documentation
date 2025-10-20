@@ -177,6 +177,8 @@ services:
   searxng:
     image: docker.io/searxng/searxng:latest
     container_name: searxng
+    environment:
+      - GRANIAN_PORT=4000
     volumes:
       - /root/searxng:/etc/searxng:rw
     ports:
