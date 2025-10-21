@@ -365,8 +365,8 @@ sudo -u postgres psql
 ~~~sql
 // CHANGE THE USERNAME AND PASSWORD
 CREATE DATABASE openwebui;
-CREATE USER openwebui WITH PASSWORD 'openwebui_postgre!!';
-ALTER DATABASE openwebui OWNER TO openwebui;
+CREATE USER "openwebui" WITH PASSWORD 'openwebui_postgre!!';
+ALTER DATABASE openwebui OWNER TO "openwebui";
 ~~~
 
 We can store the database password in an environment variable. So, create a .env file in the open-webui directory.
