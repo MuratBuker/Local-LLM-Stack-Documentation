@@ -47,6 +47,17 @@
         "GLASSHOUSE_USERNAME": "barisserbes",
         "GLASSHOUSE_CACHE_TTL": "300"
       }
+    },
+    "n8n": {
+      "command": "npx",
+      "args": ["n8n-mcp"],
+      "env": {
+        "MCP_MODE": "stdio",
+        "LOG_LEVEL": "error",
+        "DISABLE_CONSOLE_OUTPUT": "true",
+        "N8N_API_URL": "http://10.10.10.8:32204",
+        "N8N_API_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIzZmM5NDljOC03NGI5LTRmNWMtYjVhZC1mYjhkOGI0NWI5MzMiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzYxMzI5Mzk3LCJleHAiOjE3NjM4NDUyMDB9.5RBkgMW3MJEX0l2FdePGwgvrMZ8dM2Sb0rQELigeqBs"
+      }
     }
   }
 }
