@@ -50,6 +50,12 @@ services:
           ENABLE_WEB_SEARCH: "False"
           ENABLE_EVALUATION_ARENA_MODELS: "True"
           ENABLE_CODE_INTERPRETER: "False"
+          # TTS Config
+          AUDIO_TTS_ENGINE: "openai"
+          AUDIO_TTS_MODEL: "kokoro"
+          AUDIO_TTS_VOICE: "af_bella" # You can change to various voice
+          AUDIO_TTS_OPENAI_API_BASE_URL: "http://host.docker.internal:8880/v1"
+          AUDIO_TTS_OPENAI_API_KEY: 123456 # Will not be used, enter anything
           # User signup settings
           DEFAULT_USER_ROLE: pending
           ENABLE_SIGNUP_PASSWORD_CONFIRMATION: "True"

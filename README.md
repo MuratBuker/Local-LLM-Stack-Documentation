@@ -27,6 +27,7 @@ Here is a basic diagram of the stack architecture:
 - [vLLM Config](#vllm-config)
 - [MCP Configurations](#mcp-configurations)
 - [MCPO Config](#mcpo-config)
+- [Kokoro TTS Config](#kokoro-tts-config)
 - [Watchtower](#watchtower)
 - [Bundled Stack Docker Compose](#bundled-stack-docker-compose)
 - [Closing](#closing)
@@ -727,6 +728,34 @@ journalctl -u mcpo -f
 
 ---
 
+### Kokoro TTS Config
+
+- I will git clone, build and use Kokoro for TTS solution as docker container again. Here are the steps.
+
+- Clone and enter GPU directory for GPU support.
+~~~bash
+git clone https://github.com/remsky/Kokoro-FastAPI.git
+cd Kokoro-FastAPI/docker/gpu
+~~~
+
+- Build docker image with GPU support. This command will be compile the image. More details on `remsky`'s github page.
+
+~~~bash
+docker compose up --build
+~~~
+
+- During compilation, I faced an permission issue. Most probably, I was doing everything as `root`. In case you faces same problem, change the permission of /api/ subfolder.
+
+~~~bash
+pwd
+>>> /root/Kokoro-FastAPI/api
+chmod 644 /root/Kokoro-FastAPI/api
+~~~
+
+- After the Kokoro FastAPI docker is up and running properly, go to Audio -> TTS config on Open-WebUI or look for my `docker-compose.yaml `to see the environment variables for TTS config.
+
+---
+
 ### Watchtower
 
 Since we are heavily using Docker container, managing their image updates is a thing. You can use Watchtower to monitor and check every container you specified at the defined time. It will download new image if any and restart the container with the new image.
@@ -788,7 +817,11 @@ services:
           ENABLE_CODE_INTERPRETER: "False"
           DEFAULT_USER_ROLE: pending
           ENABLE_SIGNUP_PASSWORD_CONFIRMATION: "True"
-          MCP_ENABLE: "True"
+          AUDIO_TTS_ENGINE: "openai"
+          AUDIO_TTS_MODEL: "kokoro"
+          AUDIO_TTS_VOICE: "af_bella"
+          AUDIO_TTS_OPENAI_API_BASE_URL: "http://host.docker.internal:8880/v1"
+          AUDIO_TTS_OPENAI_API_KEY: 123456
           ENABLE_AUTOCOMPLETE_GENERATION: "False"
           DATABASE_URL: postgresql://openwebui:${DB_PASS}@host.docker.internal:5432/openwebui
           TOOL_SERVER_CONNECTIONS: '[{"name": "Netbox", "url": "http://mcpo:8009/netbox"},{"name": "Time", "url": "http://mcpo:8009/time"},{"name": "Searxng", "url": "http://mcpo:8009/searxng"},{"name": "Wikipedia", "url": "http://mcpo:8009/wikipedia"},{"name": "GHOS", "url": "http://mcpo:8009/glasshouse"}]'
