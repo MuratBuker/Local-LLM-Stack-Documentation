@@ -177,8 +177,10 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
-      - TZ=Europe/Istanbul
-    command: --schedule "0 0 0 * * *" open-webui docling-serve searxng portainer qdrant
+      TZ: Europe/Istanbul
+      WATCHTOWER_CLEANUP: "true"
+      WATCHTOWER_DEBUG: "true"
+      WATCHTOWER_SCHEDULE: 0 45 * * * *
 
   searxng:
     image: docker.io/searxng/searxng:latest
