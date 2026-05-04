@@ -636,9 +636,9 @@ I will use MCPO to proxy all the MCP servers. MCPO is a multi-cloud proxy orches
 * Run MCPO as a service via port 8009 (whatever port you want)
 
 ~~~bash
-mkdir /~~/mcpo
-pip install mcpo
-nano /~~/mcpo/config.json
+mkdir /~/mcpo
+pip3 install mcpo
+nano /~/mcpo/config.json
 ~~~
 
 Copy-paste below json to file.
