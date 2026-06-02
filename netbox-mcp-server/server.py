@@ -147,10 +147,10 @@ def resolve_tenant_identifier(tenant_name: str):
             tenant_name = actual_identifier
 
     # First try to find by exact name
-    tenants = netbox.get("tenancy/tenants", params={"name": tenant_name})
+    tenants = netbox.get("tenancy/tenants", params={"name": tenant_name})#type: ignore
 
     if tenants and len(tenants) > 0:
-        tenant = tenants[0]
+        tenant = tenants[0] #type: ignore
         # Prefer slug if available, otherwise use ID
         if tenant.get('slug'):
             return 'tenant', tenant['slug']
@@ -158,16 +158,16 @@ def resolve_tenant_identifier(tenant_name: str):
             return 'tenant_id', tenant['id']
 
     # If not found by exact name, try case-insensitive search
-    tenants = netbox.get("tenancy/tenants", params={"q": tenant_name})
+    tenants = netbox.get("tenancy/tenants", params={"q": tenant_name})#type: ignore
     if tenants and len(tenants) > 0:
-        tenant = tenants[0]
+        tenant = tenants[0]#type: ignore
         if tenant.get('slug'):
             return 'tenant', tenant['slug']
         else:
             return 'tenant_id', tenant['id']
 
     # If still not found, try by slug directly
-    tenants = netbox.get("tenancy/tenants", params={"slug": tenant_name})
+    tenants = netbox.get("tenancy/tenants", params={"slug": tenant_name})#type: ignore
     if tenants and len(tenants) > 0:
         return 'tenant', tenant_name
 
@@ -211,9 +211,9 @@ def preprocess_filters(object_type: str, filters: dict) -> dict:
 
     # Manufacturer resolution
     if object_type == "device-types" and "manufacturer" in processed_filters and isinstance(processed_filters["manufacturer"], str):
-        manufacturers = netbox.get("dcim/manufacturers", params={"name": processed_filters["manufacturer"]})
+        manufacturers = netbox.get("dcim/manufacturers", params={"name": processed_filters["manufacturer"]})#type: ignore
         if manufacturers and len(manufacturers) > 0:
-            processed_filters["manufacturer_id"] = manufacturers[0]["id"]
+            processed_filters["manufacturer_id"] = manufacturers[0]["id"]#type: ignore
             del processed_filters["manufacturer"]
 
     return processed_filters
